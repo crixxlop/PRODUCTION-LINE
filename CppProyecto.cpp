@@ -70,8 +70,7 @@ public:
         ReadFile(hSerial, tempBuffer, sizeof(tempBuffer) - 1, &bytesLeidos, NULL);
 
         if (bytesLeidos > 0) {
-            tempBuffer[bytesLeidos] = '\0';
-            bufferInterno += string(tempBuffer);
+                        bufferInterno.append(tempBuffer, bytesLeidos);
         }
         return bufferInterno;
     }
