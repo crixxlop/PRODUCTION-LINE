@@ -1,100 +1,73 @@
 #include <Servo.h>
 
+Servo servo1;
+Servo servo2;
 
-const int pinIR = 2; 
+#define S0 4
+#define S1 5
+#define S2 6
+#define S3 7
+#define salidaTCS 8
 
-const int s0 = 3, s1 = 4, s2 = 5, s3 = 6, out = 7; 
+// Si sin objeto delante los servos se mueven solos, baja este numero.
+// Pon un valor un poco mayor que el R/V/A mas bajo que viste con un objeto delante.
+#define UMBRAL_OBJETO 150
 
-const int motorAdelante = 8;
-const int motorPWM = 9; 
-
-const int pinServoIzq = 10;
-const int pinServoDer = 11;
-
-Servo servoIzquierdo;
-Servo servoDerecho;
+unsigned long leerColor(bool s2, bool s3) {
+  digitalWrite(S2, s2);
+  digitalWrite(S3, s3);
+  delay(50);
+  return pulseIn(salidaTCS, LOW, 100000UL);
+}
 
 void setup() {
-  Serial.begin(115200); 
-  
-  pinMode(pinIR, INPUT);
-  pinMode(s0, OUTPUT); pinMode(s1, OUTPUT);
-  pinMode(s2, OUTPUT); pinMode(s3, OUTPUT);
-  pinMode(out, INPUT);
-  
-  pinMode(motorAdelante, OUTPUT);
-  pinMode(motorPWM, OUTPUT);
-  
-  servoIzquierdo.attach(pinServoIzq);
-  servoDerecho.attach(pinServoDer);
-  
-  
-  digitalWrite(s0, HIGH);
-  digitalWrite(s1, LOW);
-  
-  resetServos();
-  encenderBanda();
-  Serial.println("ESTADO: EN MOVIMIENTO");
+  servo1.attach(9);
+  servo2.attach(10);
+  servo1.write(0);
+  servo2.write(0);
+
+  pinMode(S0, OUTPUT);
+  pinMode(S1, OUTPUT);
+  pinMode(S2, OUTPUT);
+  pinMode(S3, OUTPUT);
+  pinMode(salidaTCS, INPUT);
+
+  digitalWrite(S0, HIGH);   // frecuencia al 20 %
+  digitalWrite(S1, LOW);
+
+  Serial.begin(9600);
 }
 
 void loop() {
-  
-  if (digitalRead(pinIR) == LOW) { 
-    apagarBanda();
-    Serial.println("ESTADO: DETENIDA");
-    delay(500); 
-    
-    String color = leerRGB();
-    Serial.print("COLOR:");
-    Serial.println(color); 
-    
-    desviarCaja(color);
-    
-    delay(1000); 
-    resetServos();
-    
-    encenderBanda();
-    Serial.println("ESTADO: EN MOVIMIENTO");
-    delay(1000); 
+  unsigned long rojo  = leerColor(LOW,  LOW);
+  unsigned long verde = leerColor(HIGH, HIGH);
+  unsigned long azul  = leerColor(LOW,  HIGH);
+
+  Serial.print("R:");   Serial.print(rojo);
+  Serial.print("\tV:"); Serial.print(verde);
+  Serial.print("\tA:"); Serial.println(azul);
+
+  if (rojo == 0 || verde == 0 || azul == 0) {
+    return;   // lectura fallida, se ignora
   }
-}
 
-void encenderBanda() {
-  digitalWrite(motorAdelante, HIGH);
-  analogWrite(motorPWM, 150); 
-}
-
-void apagarBanda() {
-  digitalWrite(motorAdelante, LOW);
-  analogWrite(motorPWM, 0);
-}
-
-void resetServos() {
-  servoIzquierdo.write(90); 
-  servoDerecho.write(90);
-}
-
-void desviarCaja(String color) {
-  if (color == "ROJO") {
-    servoIzquierdo.write(45); 
-  } else if (color == "AZUL") {
-    servoDerecho.write(135); 
-  } else if (color == "AMARILLO") {
-    
+  if (rojo < verde && rojo < azul && rojo < UMBRAL_OBJETO) {
+    Serial.println("ROJO");
+    servo1.write(45);
+    delay(2500);
+    servo1.write(0);
+    delay(500);
   }
-}
+  else if (verde < rojo && verde < azul && verde < UMBRAL_OBJETO) {
+    Serial.println("VERDE");
+    servo2.write(45);
+    delay(2500);
+    servo2.write(0);
+    delay(500);
+  }
+  else if (azul < rojo && azul < verde && azul < UMBRAL_OBJETO) {
+    Serial.println("AZUL");
+  }
 
-String leerRGB() {
- 
-  digitalWrite(s2, LOW); digitalWrite(s3, LOW);
-  int rojo = pulseIn(out, LOW);
-  
-  
-  digitalWrite(s2, LOW); digitalWrite(s3, HIGH);
-  int azul = pulseIn(out, LOW);
-  
-  
-  if (rojo < azul && rojo < 100) return "ROJO";
-  else if (azul < rojo && azul < 100) return "AZUL";
-  else return "AMARILLO"; 
+  delay(200);
 }
