@@ -131,6 +131,13 @@ public:
         cout << " Cajas Amarillas : " << contadores.getTotalAmarillas() << endl;
         cout << "----------------------------------------" << endl;
         cout << " Total Procesado : " << contadores.obtenerTotal() << endl;
+
+        if (contadores.obtenerTotal() > 0) {
+            int total = contadores.obtenerTotal();
+            cout << " Porcentaje      : Rojas " << contadores.getTotalRojas() * 100 / total
+                 << "% | Azules " << contadores.getTotalAzules() * 100 / total
+                 << "% | Amarillas " << contadores.getTotalAmarillas() * 100 / total << "%" << endl;
+        }
         
     }
 };
@@ -181,6 +188,7 @@ int main() {
         return 1;
     }
 
+    cout << "Conectado correctamente al puerto " << puerto << " a 115200 baudios." << endl;
     cout << "Esperando datos del Arduino... (cierre la ventana para salir)" << endl;
    
 
