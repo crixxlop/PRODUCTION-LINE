@@ -33,13 +33,13 @@ public:
         // Configuración de los parámetros del puerto COM
         DCB dcbParams = { 0 };
         dcbParams.DCBlength = sizeof(dcbParams);
-        if (!GetCommState(hSerial, &dcbParams)) return false;
+        if (!GetCommState(hSerial, &dcbParams)) { CloseHandle(hSerial); hSerial = INVALID_HANDLE_VALUE; return false; }
 
         dcbParams.BaudRate = baudRate;
         dcbParams.ByteSize = 8;
         dcbParams.StopBits = ONESTOPBIT;
         dcbParams.Parity = NOPARITY;
-        if (!SetCommState(hSerial, &dcbParams)) return false;
+        if (!SetCommState(hSerial, &dcbParams)) { CloseHandle(hSerial); hSerial = INVALID_HANDLE_VALUE; return false; }
 
         
         COMMTIMEOUTS timeouts = { 0 };
@@ -70,8 +70,7 @@ public:
         ReadFile(hSerial, tempBuffer, sizeof(tempBuffer) - 1, &bytesLeidos, NULL);
 
         if (bytesLeidos > 0) {
-            tempBuffer[bytesLeidos] = '\0';
-            bufferInterno += string(tempBuffer);
+                        bufferInterno.append(tempBuffer, bytesLeidos);
         }
         return bufferInterno;
     }
@@ -100,20 +99,46 @@ private:
     int totalRojas = 0;
     int totalAzules = 0;
     int totalAmarillas = 0;
+    int totalDesconocidas = 0;
 
 public:
     void incrementar(const string& color) {
-        if (color == "ROJO") totalRojas++;
-        else if (color == "AZUL") totalAzules++;
-        else if (color == "AMARILLO") totalAmarillas++;
+        if (color == "ROJO") {
+            ++totalRojas;
+            return;
+        }
+
+        if (color == "AZUL") {
+            ++totalAzules;
+            return;
+        }
+
+        if (color == "AMARILLO") {
+            ++totalAmarillas;
+            return;
+        }
+
+        ++totalDesconocidas;
     }
 
-    int getTotalRojas() const { return totalRojas; }
-    int getTotalAzules() const { return totalAzules; }
-    int getTotalAmarillas() const { return totalAmarillas; }
+    int getTotalRojas() const {
+        return totalRojas;
+    }
+
+    int getTotalAzules() const {
+        return totalAzules;
+    }
+
+    int getTotalAmarillas() const {
+        return totalAmarillas;
+    }
+
+    int getTotalDesconocidas() const {
+        return totalDesconocidas;
+    }
 
     int obtenerTotal() const {
-        return totalRojas + totalAzules + totalAmarillas;
+        return getTotalRojas() + getTotalAzules() + getTotalAmarillas();
     }
 };
 
@@ -129,8 +154,18 @@ public:
         cout << " Cajas Rojas     : " << contadores.getTotalRojas() << endl;
         cout << " Cajas Azules    : " << contadores.getTotalAzules() << endl;
         cout << " Cajas Amarillas : " << contadores.getTotalAmarillas() << endl;
+        if (contadores.getTotalDesconocidas() > 0) {
+            cout << " Sin clasificar  : " << contadores.getTotalDesconocidas() << endl;
+        }
         cout << "----------------------------------------" << endl;
         cout << " Total Procesado : " << contadores.obtenerTotal() << endl;
+
+        if (contadores.obtenerTotal() > 0) {
+            int total = contadores.obtenerTotal();
+            cout << " Porcentaje      : Rojas " << contadores.getTotalRojas() * 100 / total
+                 << "% | Azules " << contadores.getTotalAzules() * 100 / total
+                 << "% | Amarillas " << contadores.getTotalAmarillas() * 100 / total << "%" << endl;
+        }
         
     }
 };
@@ -146,16 +181,24 @@ public:
         : contadores(c), ui(u) {}
 
     void interpretarTrama(const string& trama) {
-        if (trama.empty()) return;
+        if (trama.empty()) {
+            return;
+        }
 
-        if (trama.rfind("ESTADO:", 0) == 0) {
-            string estado = trama.substr(7);
-            ui->mostrarEstado(estado);
+        const string prefijoEstado = "ESTADO:";
+        const string prefijoColor = "COLOR:";
+
+        if (trama.compare(0, prefijoEstado.size(), prefijoEstado) == 0) {
+            ui->mostrarEstado(trama.substr(prefijoEstado.size()));
+            return;
         }
-        else if (trama.rfind("COLOR:", 0) == 0) {
-            string color = trama.substr(6);
-            clasificarProducto(color);
+
+        if (trama.compare(0, prefijoColor.size(), prefijoColor) == 0) {
+            clasificarProducto(trama.substr(prefijoColor.size()));
+            return;
         }
+
+        cout << "[AVISO] Mensaje desconocido: " << trama << endl;
     }
 
     void clasificarProducto(const string& color) {
@@ -178,7 +221,9 @@ int main() {
         return 1;
     }
 
-    cout << "Conexion serial establecida correctamente en " << puerto << endl;
+    cout << "Conectado correctamente al puerto " << puerto << " a 115200 baudios." << endl;
+    cout << "Esperando datos del Arduino... (cierre la ventana para salir)" << endl;
+    cout << "======== SISTEMA BANDA CLASIFICADORA ========" << endl;
    
 
     auto contadores = make_shared<ContadoresEstado>();
