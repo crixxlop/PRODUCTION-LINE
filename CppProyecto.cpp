@@ -33,13 +33,13 @@ public:
         // Configuración de los parámetros del puerto COM
         DCB dcbParams = { 0 };
         dcbParams.DCBlength = sizeof(dcbParams);
-        if (!GetCommState(hSerial, &dcbParams)) return false;
+        if (!GetCommState(hSerial, &dcbParams)) { CloseHandle(hSerial); hSerial = INVALID_HANDLE_VALUE; return false; }
 
         dcbParams.BaudRate = baudRate;
         dcbParams.ByteSize = 8;
         dcbParams.StopBits = ONESTOPBIT;
         dcbParams.Parity = NOPARITY;
-        if (!SetCommState(hSerial, &dcbParams)) return false;
+        if (!SetCommState(hSerial, &dcbParams)) { CloseHandle(hSerial); hSerial = INVALID_HANDLE_VALUE; return false; }
 
         
         COMMTIMEOUTS timeouts = { 0 };
@@ -156,6 +156,9 @@ public:
             string color = trama.substr(6);
             clasificarProducto(color);
         }
+         else {
+            cout << "[AVISO] Mensaje desconocido: " << trama << endl;
+        }
     }
 
     void clasificarProducto(const string& color) {
@@ -178,7 +181,7 @@ int main() {
         return 1;
     }
 
-    cout << "Conexion serial establecida correctamente en " << puerto << endl;
+    cout << "Esperando datos del Arduino... (cierre la ventana para salir)" << endl;
    
 
     auto contadores = make_shared<ContadoresEstado>();
