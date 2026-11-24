@@ -70,8 +70,7 @@ public:
         ReadFile(hSerial, tempBuffer, sizeof(tempBuffer) - 1, &bytesLeidos, NULL);
 
         if (bytesLeidos > 0) {
-            tempBuffer[bytesLeidos] = '\0';
-            bufferInterno += string(tempBuffer);
+                        bufferInterno.append(tempBuffer, bytesLeidos);
         }
         return bufferInterno;
     }
@@ -103,17 +102,35 @@ private:
 
 public:
     void incrementar(const string& color) {
-        if (color == "ROJO") totalRojas++;
-        else if (color == "AZUL") totalAzules++;
-        else if (color == "AMARILLO") totalAmarillas++;
+        if (color == "ROJO") {
+            ++totalRojas;
+            return;
+        }
+
+        if (color == "AZUL") {
+            ++totalAzules;
+            return;
+        }
+
+        if (color == "AMARILLO") {
+            ++totalAmarillas;
+        }
     }
 
-    int getTotalRojas() const { return totalRojas; }
-    int getTotalAzules() const { return totalAzules; }
-    int getTotalAmarillas() const { return totalAmarillas; }
+    int getTotalRojas() const {
+        return totalRojas;
+    }
+
+    int getTotalAzules() const {
+        return totalAzules;
+    }
+
+    int getTotalAmarillas() const {
+        return totalAmarillas;
+    }
 
     int obtenerTotal() const {
-        return totalRojas + totalAzules + totalAmarillas;
+        return getTotalRojas() + getTotalAzules() + getTotalAmarillas();
     }
 };
 
@@ -153,19 +170,24 @@ public:
         : contadores(c), ui(u) {}
 
     void interpretarTrama(const string& trama) {
-        if (trama.empty()) return;
+        if (trama.empty()) {
+            return;
+        }
 
-        if (trama.rfind("ESTADO:", 0) == 0) {
-            string estado = trama.substr(7);
-            ui->mostrarEstado(estado);
+        const string prefijoEstado = "ESTADO:";
+        const string prefijoColor = "COLOR:";
+
+        if (trama.compare(0, prefijoEstado.size(), prefijoEstado) == 0) {
+            ui->mostrarEstado(trama.substr(prefijoEstado.size()));
+            return;
         }
-        else if (trama.rfind("COLOR:", 0) == 0) {
-            string color = trama.substr(6);
-            clasificarProducto(color);
+
+        if (trama.compare(0, prefijoColor.size(), prefijoColor) == 0) {
+            clasificarProducto(trama.substr(prefijoColor.size()));
+            return;
         }
-         else {
-            cout << "[AVISO] Mensaje desconocido: " << trama << endl;
-        }
+
+        cout << "[AVISO] Mensaje desconocido: " << trama << endl;
     }
 
     void clasificarProducto(const string& color) {
